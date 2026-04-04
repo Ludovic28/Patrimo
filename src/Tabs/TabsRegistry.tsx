@@ -1,8 +1,9 @@
 // src/tabs/TabRegistry.tsx
-import SciTab from "./SciTab";
 import LaundryTab from "./Laundry";
+import LogoutButton from "./LogoutButton";
+import SciTab from "./SciTab";
 
-export type TabKey = "sci" | "laundry";
+export type TabKey = "sci" | "laundry" | "deconnexion";
 
 export interface TabItem {
   key: TabKey;
@@ -13,6 +14,7 @@ export interface TabItem {
 export const TABS: TabItem[] = [
   { key: "sci", label: "SCI", Component: SciTab },
   { key: "laundry", label: "Laverie", Component: LaundryTab },
+  { key: "deconnexion", label: "Déconnexion", Component: LogoutButton },
 ];
 
 // Helper
