@@ -8,6 +8,7 @@ import {
 import ProtectedRoute from "./Components/ProtectedRoute";
 import CompanyDashboard from "./pages/CompanyDashboard";
 import CreateCompany from "./pages/CreateCompany";
+import CreateProject from "./pages/CreateProject";
 import Login from "./pages/Login";
 import ManageProjects from "./pages/ManageProjects";
 
@@ -49,6 +50,14 @@ export default function ImmoROIApp() {
           element={
             <ProtectedRoute>
               <CompanyDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/company/:id/create-project"
+          element={
+            <ProtectedRoute>
+              <CreateProject />
             </ProtectedRoute>
           }
         />
