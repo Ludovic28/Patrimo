@@ -4,11 +4,13 @@
   "tabWidth": 2,
   "useTabs": false,
   "trailingComma": "es5",
-  "printWidth": 100,
+  "printWidth": 50,
   "bracketSpacing": true,
   "arrowParens": "always",
   "jsxSingleQuote": false,
   "jsxBracketSameLine": false,
   "endOfLine": "lf",
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "plugins": [
+    "prettier-plugin-tailwindcss"
+  ]
 }

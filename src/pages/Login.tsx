@@ -43,7 +43,7 @@ export default function Login() {
           setEmail={setPassword}
           handleLogin={handleLogin}
         />
-        <ButtonZone onClick={handleLogin} disabled={loading}>
+        <ButtonZone variant="primary" onClick={handleLogin} disabled={loading}>
           {loading ? "Connexion..." : "Se connecter"}
         </ButtonZone>
       </div>
