@@ -6,6 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import ProtectedRoute from "./Components/ProtectedRoute";
+import CompanyDashboard from "./pages/CompanyDashboard";
 import CreateCompany from "./pages/CreateCompany";
 import Login from "./pages/Login";
 import ManageProjects from "./pages/ManageProjects";
@@ -40,6 +41,14 @@ export default function ImmoROIApp() {
           element={
             <ProtectedRoute>
               <CreateCompany />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/company/:id"
+          element={
+            <ProtectedRoute>
+              <CompanyDashboard />
             </ProtectedRoute>
           }
         />
