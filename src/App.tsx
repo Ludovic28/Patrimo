@@ -1,7 +1,12 @@
 // src/App.tsx
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
 import ProtectedRoute from "./Components/ProtectedRoute";
-import CreatedProject from "./pages/CreatedProject";
+import CreateCompany from "./pages/CreateCompany";
 import Login from "./pages/Login";
 import ManageProjects from "./pages/ManageProjects";
 
@@ -9,8 +14,19 @@ export default function ImmoROIApp() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Navigate to="/manage-projects" replace />} />
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/manage-projects"
+              replace
+            />
+          }
+        />
         <Route
           path="/manage-projects"
           element={
@@ -23,7 +39,7 @@ export default function ImmoROIApp() {
           path="/create-project"
           element={
             <ProtectedRoute>
-              <CreatedProject />
+              <CreateCompany />
             </ProtectedRoute>
           }
         />
