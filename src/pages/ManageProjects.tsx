@@ -15,6 +15,7 @@ type Company = {
   siret: string | null;
   created_at: string;
   company_types: CompanyType;
+  parent_company_id: string | null;
 };
 
 // Helper to extract the type name regardless of Supabase return format
@@ -44,7 +45,7 @@ export default function ManageProjects() {
       const { data, error } = await supabase
         .from("companies")
         .select(
-          "id, name, siret, created_at, company_types(name)"
+          "id, name, siret, created_at, company_types(name), parent_company_id"
         )
         .order("created_at", {
           ascending: true,
@@ -89,24 +90,31 @@ export default function ManageProjects() {
         </ButtonZone>
 
         {/* Existing companies — oldest left, newest right */}
-        {companies.map((company) => (
-          <ButtonZone
-            key={company.id}
-            variant="company"
-            onClick={() =>
-              navigate(`/company/${company.id}`)
-            }
-            disabled={false}
-            className="aspect-square w-full"
-          >
-            <span className="text-sm font-medium">
-              {company.name}
-            </span>
-            <span className="text-xs opacity-60">
-              {getTypeName(company.company_types)}
-            </span>
-          </ButtonZone>
-        ))}
+        {companies
+          .filter(
+            (company) =>
+              company.parent_company_id === null
+          )
+          .map((company) => (
+            <ButtonZone
+              key={company.id}
+              variant="company"
+              onClick={() =>
+                navigate(`/company/${company.id}`)
+              }
+              disabled={false}
+              className="aspect-square w-full"
+            >
+              <span className="text-sm font-medium">
+                {company.name}
+              </span>
+              <span className="text-xs opacity-60">
+                {getTypeName(
+                  company.company_types
+                )}
+              </span>
+            </ButtonZone>
+          ))}
       </div>
 
       {/* Empty state */}

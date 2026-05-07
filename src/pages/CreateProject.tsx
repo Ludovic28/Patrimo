@@ -41,8 +41,8 @@ function getPageLabel(companyTypeName: string): {
   switch (companyTypeName.toLowerCase()) {
     case "holding":
       return {
-        title: "Associer une filiale",
-        placeholder: "Rechercher une société...",
+        title: "Créer une filiale",
+        placeholder: "Nom de la société filiale",
       };
     case "sci":
       return {
@@ -79,30 +79,25 @@ export default function CreateProject() {
   const [isHolding, setIsHolding] =
     useState(false);
 
-  // Standard project form fields
+  // Form fields
   const [name, setName] = useState("");
   const [description, setDescription] =
     useState("");
   const [projectTypeId, setProjectTypeId] =
     useState("");
+
+  // Standard project types
   const [projectTypes, setProjectTypes] =
     useState<ProjectType[]>([]);
 
-  // Holding — list of existing companies to link as subsidiaries
-  const [allCompanies, setAllCompanies] =
+  // Holding — company types for creating a subsidiary
+  const [subsidiaryTypes, setSubsidiaryTypes] =
     useState<{ id: string; name: string }[]>([]);
-  const [
-    selectedSubsidiaryId,
-    setSelectedSubsidiaryId,
-  ] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<
     string | null
   >(null);
-
-  const [subsidiaryTypes, setSubsidiaryTypes] =
-    useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -130,23 +125,21 @@ export default function CreateProject() {
               } | null
             )?.name ?? "");
 
-        // If holding — fetch all other companies to link as subsidiaries
         if (
           typeName.toLowerCase() === "holding"
         ) {
           setIsHolding(true);
 
-          // Fetch all company types to create a new subsidiary
+          // Fetch all company types except Holding
           const { data: companyTypesData } =
             await supabase
               .from("company_types")
               .select("id, name")
-              .neq("name", "Holding"); // Une holding ne peut pas contenir une autre holding
+              .neq("name", "Holding");
 
           if (companyTypesData)
             setSubsidiaryTypes(companyTypesData);
         } else {
-          // Standard flow — fetch allowed project types
           const companyTypeId = Array.isArray(
             companyTypes
           )
@@ -192,7 +185,7 @@ export default function CreateProject() {
     setLoading(true);
     setError(null);
 
-    // Holding — link a subsidiary by updating its parent_company_id
+    // Holding — create a new company linked to this holding
     if (isHolding) {
       if (!name || !projectTypeId) {
         setError(
@@ -212,7 +205,7 @@ export default function CreateProject() {
           name,
           type_id: projectTypeId,
           user_id: user?.id,
-          parent_company_id: id, // Lié à la holding
+          parent_company_id: id,
         });
 
       if (error) {
@@ -262,7 +255,7 @@ export default function CreateProject() {
 
   return (
     <div className="p-8">
-      {/* Back button — top left, outside the centered container */}
+      {/* Back button — top left */}
       <ButtonZone
         variant="ghost"
         onClick={() => navigate(`/company/${id}`)}
@@ -270,7 +263,8 @@ export default function CreateProject() {
       >
         ← Retour
       </ButtonZone>
-      <div className="mx-auto max-w-md space-y-4 p-8">
+
+      <div className="mx-auto mt-4 max-w-md space-y-4">
         <h1 className="text-2xl font-bold">
           {title}
         </h1>
@@ -286,17 +280,16 @@ export default function CreateProject() {
           </p>
         )}
 
-        {/* Holding — dropdown of existing companies */}
         {isHolding ? (
+          // Holding — create a new subsidiary company
           <>
             <InputZone
               type="text"
-              placeholder="Nom de la société filiale"
+              placeholder={placeholder}
               email={name}
               setEmail={setName}
               handleLogin={handleCreate}
             />
-
             <select
               value={projectTypeId}
               onChange={(e) =>
@@ -315,7 +308,7 @@ export default function CreateProject() {
             </select>
           </>
         ) : (
-          // Standard form
+          // Standard flow — create a new project
           <>
             <InputZone
               type="text"
@@ -357,11 +350,7 @@ export default function CreateProject() {
           onClick={handleCreate}
           disabled={loading}
         >
-          {loading
-            ? "En cours..."
-            : isHolding
-              ? "Associer"
-              : "Créer"}
+          {loading ? "En cours..." : "Créer"}
         </ButtonZone>
       </div>
     </div>
