@@ -64,19 +64,19 @@ export default function ManageProjects() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold">
+      <h1 className="text-lg font-bold sm:text-xl md:text-2xl lg:text-3xl">
         Gestion des sociétés
       </h1>
 
       {/* Loading state */}
       {loading && (
-        <p className="mt-6 text-sm text-gray-400">
+        <p className="text-sm sm:text-base md:text-lg lg:text-xl">
           Chargement...
         </p>
       )}
 
       {/* Responsive grid — 2 cols mobile, 3 tablet, 4 md, 6 desktop */}
-      <div className="mt-6 grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {/* Add new company button — always first */}
         <ButtonZone
           variant="add"
@@ -119,7 +119,7 @@ export default function ManageProjects() {
 
       {/* Empty state */}
       {!loading && companies.length === 0 && (
-        <p className="mt-4 text-sm text-gray-400">
+        <p className="text-sm sm:text-base md:text-lg lg:text-xl">
           Aucune société pour le moment.
         </p>
       )}
