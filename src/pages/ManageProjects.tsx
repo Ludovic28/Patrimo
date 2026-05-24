@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../Lib/supabase/supabase";
 import { ButtonZone } from "../Utils/ZoneTypes";
+import Navbar from "../Utils/navBar";
 
 // Handles both object and array return from Supabase join
 type CompanyType =
@@ -64,6 +65,7 @@ export default function ManageProjects() {
 
   return (
     <div className="p-8">
+      <Navbar />
       <h1 className="text-lg font-bold sm:text-xl md:text-2xl lg:text-3xl">
         Gestion des sociétés
       </h1>

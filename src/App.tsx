@@ -11,6 +11,7 @@ import CreateCompany from "./pages/CreateCompany";
 import CreateProject from "./pages/CreateProject";
 import Login from "./pages/Login";
 import ManageProjects from "./pages/ManageProjects";
+import Profil from "./pages/Profil";
 
 export default function ImmoROIApp() {
   return (
@@ -58,6 +59,14 @@ export default function ImmoROIApp() {
           element={
             <ProtectedRoute>
               <CreateProject />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profil"
+          element={
+            <ProtectedRoute>
+              <Profil />
             </ProtectedRoute>
           }
         />

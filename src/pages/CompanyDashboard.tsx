@@ -4,6 +4,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { supabase } from "../Lib/supabase/supabase";
+import Navbar from "../Utils/navBar";
 import { ButtonZone } from "../Utils/ZoneTypes";
 
 // Company with its type name joined
@@ -99,6 +100,7 @@ export default function CompanyDashboard() {
 
   return (
     <div className="p-8">
+      <Navbar />
       {/* Header with back button */}
       <div className="mb-8 flex items-center gap-4">
         <ButtonZone
