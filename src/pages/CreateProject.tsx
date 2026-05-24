@@ -8,6 +8,7 @@ import {
   ButtonZone,
   InputZone,
 } from "../Utils/ZoneTypes";
+import SCIForm from "./sci/SCIForm";
 
 type ProjectType = {
   id: string;
@@ -32,42 +33,6 @@ function getTypeName(
   if (Array.isArray(companyTypes))
     return companyTypes[0]?.name ?? "";
   return companyTypes.name;
-}
-
-function getPageLabel(companyTypeName: string): {
-  title: string;
-  placeholder: string;
-} {
-  switch (companyTypeName.toLowerCase()) {
-    case "holding":
-      return {
-        title: "Créer une filiale",
-        placeholder: "Nom de la société filiale",
-      };
-    case "sci":
-      return {
-        title: "Ajouter un bien immobilier",
-        placeholder:
-          "Nom du bien (ex: Appart Paris 11e)",
-      };
-    case "sas":
-    case "sarl":
-    case "sa":
-      return {
-        title: "Ajouter une opération",
-        placeholder: "Nom de l'opération",
-      };
-    case "auto-entrepreneur":
-      return {
-        title: "Ajouter un contrat",
-        placeholder: "Nom du contrat ou client",
-      };
-    default:
-      return {
-        title: "Ajouter un projet",
-        placeholder: "Nom du projet",
-      };
-  }
 }
 
 export default function CreateProject() {
@@ -249,43 +214,17 @@ export default function CreateProject() {
   const companyTypeName = getTypeName(
     company?.company_types ?? null
   );
-  const { title, placeholder } = getPageLabel(
-    companyTypeName
-  );
 
-  return (
-    <div className="p-8">
-      {/* Back button — top left */}
-      <ButtonZone
-        variant="ghost"
-        onClick={() => navigate(`/company/${id}`)}
-        disabled={false}
-      >
-        ← Retour
-      </ButtonZone>
-
-      <div className="mx-auto mt-4 max-w-md space-y-4">
-        <h1 className="text-2xl font-bold">
-          {title}
-        </h1>
-        {company && (
-          <p className="text-sm text-gray-400">
-            dans {company.name}
-          </p>
-        )}
-
-        {error && (
-          <p className="text-sm text-red-500">
-            {error}
-          </p>
-        )}
-
-        {isHolding ? (
-          // Holding — create a new subsidiary company
+  const renderForm = () => {
+    switch (companyTypeName.toLowerCase()) {
+      case "sci":
+        return <SCIForm companyId={id!} />;
+      case "holding":
+        return (
           <>
             <InputZone
               type="text"
-              placeholder={placeholder}
+              placeholder="Nom de la société filiale"
               email={name}
               setEmail={setName}
               handleLogin={handleCreate}
@@ -307,12 +246,13 @@ export default function CreateProject() {
               ))}
             </select>
           </>
-        ) : (
-          // Standard flow — create a new project
+        );
+      default:
+        return (
           <>
             <InputZone
               type="text"
-              placeholder={placeholder}
+              placeholder="Nom du projet"
               email={name}
               setEmail={setName}
               handleLogin={handleCreate}
@@ -344,14 +284,43 @@ export default function CreateProject() {
               ))}
             </select>
           </>
+        );
+    }
+  };
+
+  return (
+    <div className="p-8">
+      {/* Back button — top left */}
+      <ButtonZone
+        variant="ghost"
+        onClick={() => navigate(`/company/${id}`)}
+        disabled={false}
+      >
+        ← Retour
+      </ButtonZone>
+
+      <div className="mx-auto mt-4 max-w-md space-y-4">
+        <h1 className="text-2xl font-bold">
+          {companyTypeName.toLowerCase() === "sci"
+            ? "Ajouter un bien immobilier"
+            : companyTypeName.toLowerCase() ===
+                "holding"
+              ? "Créer une filiale"
+              : "Ajouter un projet"}
+        </h1>
+        {company && (
+          <p className="text-sm text-gray-400">
+            dans {company.name}
+          </p>
         )}
 
-        <ButtonZone
-          onClick={handleCreate}
-          disabled={loading}
-        >
-          {loading ? "En cours..." : "Créer"}
-        </ButtonZone>
+        {error && (
+          <p className="text-sm text-red-500">
+            {error}
+          </p>
+        )}
+
+        {renderForm()}
       </div>
     </div>
   );
