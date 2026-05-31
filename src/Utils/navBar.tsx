@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   useLocation,
   useNavigate,
@@ -9,33 +10,59 @@ export default function Navbar() {
 
   const links = [
     { label: "Accueil", path: "/" },
-    { label: "Schéma", path: "/" },
+    { label: "Schéma", path: "/t" },
   ];
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <nav className="flex w-full items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-      {/* Liens */}
+      {/* Liens — cachés sur mobile */}
       <ul className="hidden items-center gap-6 md:flex">
         {links.map((link) => (
           <li key={link.path}>
+            {" "}
             <button
-              onClick={() => navigate(link.path)}
-              className={`text-sm font-medium transition-colors ${
-                location.pathname === link.path
-                  ? "border-b-2 border-teal-500 text-teal-500"
-                  : "text-gray-500 hover:text-teal-500"
-              }`}
+              onClick={() => {
+                navigate(link.path);
+                setMenuOpen(false);
+              }}
             >
               {link.label}
-            </button>
+            </button>{" "}
           </li>
         ))}
       </ul>
-      {/* Profil / Déconnexion */}²
+
+      {/* Burger — visible uniquement sur mobile */}
       <button
-        onClick={() => navigate("/profil")}
-        className="text-sm font-medium text-gray-500 transition-colors hover:text-teal-500"
+        className="md:hidden"
+        onClick={() => setMenuOpen(!menuOpen)}
       >
+        ☰
+      </button>
+
+      {/* Menu mobile — s'ouvre sous la navbar */}
+      {menuOpen && (
+        <div className="absolute left-0 top-16 w-full border-b border-gray-200 bg-white md:hidden">
+          <ul className="flex flex-col gap-4 px-6 py-4">
+            {links.map((link) => (
+              <li key={link.path}>
+                <button
+                  onClick={() => {
+                    navigate(link.path);
+                    setMenuOpen(false);
+                  }}
+                >
+                  {link.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Profil */}
+      <button onClick={() => navigate("/profil")}>
         Profil
       </button>
     </nav>
