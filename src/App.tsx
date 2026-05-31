@@ -12,7 +12,7 @@ import CreateProject from "./pages/CreateProject";
 import Login from "./pages/Login";
 import ManageProjects from "./pages/ManageProjects";
 import Profil from "./pages/Profil";
-import PropertyDashboard from "./pages/sci/PropertyDashboard";
+import PropertyDetail from "./pages/sci/PropertyDetail";
 import SCIForm from "./pages/sci/SCIForm";
 
 export default function ImmoROIApp() {
@@ -74,11 +74,11 @@ export default function ImmoROIApp() {
         />
         <Route
           path="/sci/createproperty"
-          element={<SCIForm />}
+          element={<SCIForm companyId={""} />}
         />
         <Route
-          path="/sci/property/:id"
-          element={<PropertyDashboard />}
+          path="/property/:id"
+          element={<PropertyDetail />}
         />
       </Routes>
     </BrowserRouter>

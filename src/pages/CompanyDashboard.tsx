@@ -6,6 +6,7 @@ import {
 import { supabase } from "../Lib/supabase/supabase";
 import Navbar from "../Utils/navBar";
 import { ButtonZone } from "../Utils/ZoneTypes";
+import PropertyDashboard from "./sci/PropertyDashboard";
 
 // Company with its type name joined
 type Company = {
@@ -30,13 +31,10 @@ function getTypeName(
   return companyTypes.name;
 }
 
-// Dashboard for a specific company
-// Displays company info and allows managing its projects
 export default function CompanyDashboard() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Company data fetched from Supabase
   const [company, setCompany] =
     useState<Company | null>(null);
   const [companies, setCompanies] = useState<
@@ -46,7 +44,6 @@ export default function CompanyDashboard() {
   const [hasCompanyParent, setHasCompanyParent] =
     useState(false);
 
-  // Fetch company details on component mount
   useEffect(() => {
     const fetchCompany = async () => {
       const { data, error } = await supabase
@@ -54,25 +51,24 @@ export default function CompanyDashboard() {
         .select(
           "id, name, siret, created_at, company_types(name), parent_company_id"
         )
-        .order("created_at", {
-          ascending: true,
-        });
+        .order("created_at", { ascending: true });
 
       if (error)
         console.error(
           "Error fetching company:",
           error
         );
+
       if (data) {
         const companyData = data.find(
           (c) => c.id === id
         );
         if (companyData)
           setCompany(companyData as Company);
-        const companyChlildren = data.filter(
+        const companyChildren = data.filter(
           (c) => c.parent_company_id === id
         ) as Company[];
-        setCompanies(companyChlildren);
+        setCompanies(companyChildren);
         setHasCompanyParent(
           companyData?.parent_company_id !== null
         );
@@ -98,9 +94,14 @@ export default function CompanyDashboard() {
     );
   }
 
+  const companyTypeName = getTypeName(
+    company.company_types
+  ).toLowerCase();
+
   return (
     <div className="p-8">
       <Navbar />
+
       {/* Header with back button */}
       <div className="mb-8 flex items-center gap-4">
         <ButtonZone
@@ -129,59 +130,59 @@ export default function CompanyDashboard() {
         </div>
       </div>
 
-      {/* Projects section */}
-      <h2 className="text-base font-semibold sm:text-lg md:text-xl lg:text-2xl">
-        Projets
-      </h2>
+      {/* SCI — affiche les biens immobiliers */}
+      {companyTypeName === "sci" ? (
+        <PropertyDashboard companyId={id!} />
+      ) : (
+        <>
+          <h2 className="text-base font-semibold sm:text-lg md:text-xl lg:text-2xl">
+            Projets
+          </h2>
 
-      {/* Loading state */}
-      {loading && (
-        <p className="text-sm sm:text-base md:text-lg lg:text-xl">
-          Chargement...
-        </p>
-      )}
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            <ButtonZone
+              variant="add"
+              onClick={() =>
+                navigate(
+                  `/company/${id}/create-project`
+                )
+              }
+              disabled={false}
+              className="aspect-square w-full"
+            >
+              +
+            </ButtonZone>
 
-      {/* Responsive grid — 2 cols mobile, 3 tablet, 4 md, 6 desktop */}
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {/* Add new company button — always first */}
-        <ButtonZone
-          variant="add"
-          onClick={() =>
-            navigate(
-              `/company/${id}/create-project`
-            )
-          }
-          disabled={false}
-          className="aspect-square w-full"
-        >
-          +
-        </ButtonZone>
+            {companies.map((company) => (
+              <ButtonZone
+                key={company.id}
+                variant="company"
+                onClick={() =>
+                  navigate(
+                    `/company/${company.id}`
+                  )
+                }
+                disabled={false}
+                className="aspect-square w-full"
+              >
+                <span className="text-sm font-medium">
+                  {company.name}
+                </span>
+                <span className="text-xs opacity-60">
+                  {getTypeName(
+                    company.company_types
+                  )}
+                </span>
+              </ButtonZone>
+            ))}
+          </div>
 
-        {/* Existing companies — oldest left, newest right */}
-        {companies.map((company) => (
-          <ButtonZone
-            key={company.id}
-            variant="company"
-            onClick={() =>
-              navigate(`/company/${company.id}`)
-            }
-            disabled={false}
-            className="aspect-square w-full"
-          >
-            <span className="text-sm font-medium">
-              {company.name}
-            </span>
-            <span className="text-xs opacity-60">
-              {getTypeName(company.company_types)}
-            </span>
-          </ButtonZone>
-        ))}
-      </div>
-      {/* Empty state */}
-      {!loading && companies.length === 0 && (
-        <p className="text-sm sm:text-base md:text-lg lg:text-xl">
-          Aucune société pour le moment.
-        </p>
+          {!loading && companies.length === 0 && (
+            <p className="mt-4 text-sm text-gray-400">
+              Aucune société pour le moment.
+            </p>
+          )}
+        </>
       )}
     </div>
   );

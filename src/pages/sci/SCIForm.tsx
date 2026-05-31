@@ -59,6 +59,38 @@ export default function SCIForm({
   const prevStep = () =>
     setCurrentStep((prev) => prev - 1);
 
+  const [error, setError] = useState<
+    string | null
+  >(null);
+
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          name !== "" &&
+          adress !== "" &&
+          purchase_price !== "" &&
+          purchase_date !== ""
+        );
+      case 2:
+        return (
+          rent_amount !== "" &&
+          lease_start_date !== ""
+        );
+      case 3:
+        return (
+          bank_amount !== "" &&
+          duration_months !== "" &&
+          monthly_payment !== "" &&
+          loan_start_date !== "" &&
+          loan_end_date !== "" &&
+          lender_type !== ""
+        );
+      default:
+        return false;
+    }
+  };
+
   useEffect(() => {
     const fetchProjectTypeId = async () => {
       const { data } = await supabase
@@ -73,6 +105,13 @@ export default function SCIForm({
 
   const handleSubmit = async () => {
     // 1. INSERT dans projects
+
+    if (!name || !adress || !purchase_price) {
+      setError(
+        "Le nom, l'adresse et le prix d'achat sont obligatoires."
+      );
+      return;
+    }
     const {
       data: projectData,
       error: projectError,
@@ -92,9 +131,8 @@ export default function SCIForm({
       .single();
 
     if (projectError || !projectData) {
-      console.error(
-        "Erreur projet:",
-        projectError
+      setError(
+        "Erreur lors de la création du bien."
       );
       return;
     }
@@ -118,14 +156,21 @@ export default function SCIForm({
       ]);
 
     if (detailsError) {
-      console.error(
-        "Erreur details:",
-        detailsError
+      setError(
+        "Erreur lors de l'enregistrement de l'adresse."
       );
       return;
     }
 
     // 3. INSERT dans leases
+
+    if (!rent_amount || !lease_start_date) {
+      setError(
+        "Le loyer et la date de début du bail sont obligatoires."
+      );
+      return;
+    }
+
     const { error: leaseError } = await supabase
       .from("leases")
       .insert({
@@ -140,11 +185,25 @@ export default function SCIForm({
       });
 
     if (leaseError) {
-      console.error("Erreur bail:", leaseError);
+      setError(
+        "Erreur lors de l'enregistrement du bail."
+      );
       return;
     }
 
     // 4. INSERT dans loans
+
+    if (
+      !bank_amount ||
+      !duration_months ||
+      !monthly_payment
+    ) {
+      setError(
+        "Les informations du prêt sont obligatoires."
+      );
+      return;
+    }
+
     const { error: loanError } = await supabase
       .from("loans")
       .insert({
@@ -166,7 +225,9 @@ export default function SCIForm({
       });
 
     if (loanError) {
-      console.error("Erreur prêt:", loanError);
+      setError(
+        "Erreur lors de l'enregistrement du prêt."
+      );
       return;
     }
 
@@ -205,7 +266,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setName(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -218,7 +279,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setAdress(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -231,7 +292,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setPurchase_price(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -244,7 +305,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setPurchase_date(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -259,7 +320,7 @@ export default function SCIForm({
                   e.target.value
                 )
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
         </div>
@@ -278,7 +339,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setRent_amount(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -291,7 +352,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setCharges_amount(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -306,7 +367,7 @@ export default function SCIForm({
                   e.target.value
                 )
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -319,7 +380,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setLease_end_date(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
         </div>
@@ -358,7 +419,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setBank_amount(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -371,7 +432,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setDuration_months(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -384,7 +445,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setMonthly_payment(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -397,7 +458,7 @@ export default function SCIForm({
               onChange={(e) =>
                 setLoan_start_date(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
           <div>
@@ -410,13 +471,18 @@ export default function SCIForm({
               onChange={(e) =>
                 setLoan_end_date(e.target.value)
               }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+              className="w-full rounded border p-3"
             />
           </div>
         </div>
       )}
 
       {/* Navigation */}
+      {error && (
+        <p className="text-sm text-red-500">
+          {error}
+        </p>
+      )}
       <div className="flex justify-between">
         {currentStep > 1 && (
           <button onClick={prevStep}>
@@ -424,12 +490,20 @@ export default function SCIForm({
           </button>
         )}
         {currentStep < 3 && (
-          <button onClick={nextStep}>
+          <button
+            onClick={nextStep}
+            disabled={!isStepValid()}
+            className={`${!isStepValid() ? "cursor-not-allowed opacity-50" : ""}`}
+          >
             Suivant →
           </button>
         )}
         {currentStep === 3 && (
-          <button onClick={handleSubmit}>
+          <button
+            onClick={handleSubmit}
+            disabled={!isStepValid()}
+            className={`${!isStepValid() ? "cursor-not-allowed opacity-50" : ""}`}
+          >
             Créer le bien
           </button>
         )}
