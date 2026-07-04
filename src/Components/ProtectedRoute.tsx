@@ -1,28 +1,20 @@
-import { useEffect, useState } from "react";
+import { useUser } from "@clerk/clerk-react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "../Lib/supabase/supabase";
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default function ProtectedRoute({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { isLoaded, isSignedIn } = useUser();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+  if (!isLoaded) {
+    return <div>Chargement...</div>;
+  }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) return <div>Chargement...</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!isSignedIn) {
+    return <Navigate to="/login" replace />;
+  }
 
   return <>{children}</>;
 }

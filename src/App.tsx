@@ -1,25 +1,26 @@
-// src/App.tsx
+import {
+  SignedIn,
+  SignedOut,
+} from "@clerk/clerk-react";
 import {
   BrowserRouter,
   Navigate,
   Route,
   Routes,
 } from "react-router-dom";
-import ProtectedRoute from "./Components/ProtectedRoute";
 import CompanyDashboard from "./pages/CompanyDashboard";
 import CreateCompany from "./pages/CreateCompany";
 import CreateProject from "./pages/CreateProject";
 import Login from "./pages/Login";
 import ManageProjects from "./pages/ManageProjects";
 import Profil from "./pages/Profil";
-import SCIForm from "./pages/sci/SCIForm";
 
 export default function ImmoROIApp() {
   return (
     <BrowserRouter>
       <Routes>
         <Route
-          path="/login"
+          path="/login/*"
           element={<Login />}
         />
         <Route
@@ -31,54 +32,75 @@ export default function ImmoROIApp() {
             />
           }
         />
+
         <Route
           path="/manage-projects"
           element={
-            <ProtectedRoute>
-              <ManageProjects />
-            </ProtectedRoute>
+            <>
+              <SignedIn>
+                <ManageProjects />
+              </SignedIn>
+              <SignedOut>
+                <Login />
+              </SignedOut>
+            </>
           }
         />
+
         <Route
           path="/create-project"
           element={
-            <ProtectedRoute>
-              <CreateCompany />
-            </ProtectedRoute>
+            <>
+              <SignedIn>
+                <CreateCompany />
+              </SignedIn>
+              <SignedOut>
+                <Login />
+              </SignedOut>
+            </>
           }
         />
+
         <Route
           path="/company/:id"
           element={
-            <ProtectedRoute>
-              <CompanyDashboard />
-            </ProtectedRoute>
+            <>
+              <SignedIn>
+                <CompanyDashboard />
+              </SignedIn>
+              <SignedOut>
+                <Login />
+              </SignedOut>
+            </>
           }
         />
+
         <Route
           path="/company/:id/create-project"
           element={
-            <ProtectedRoute>
-              <CreateProject />
-            </ProtectedRoute>
+            <>
+              <SignedIn>
+                <CreateProject />
+              </SignedIn>
+              <SignedOut>
+                <Login />
+              </SignedOut>
+            </>
           }
         />
         <Route
           path="/profil"
           element={
-            <ProtectedRoute>
-              <Profil />
-            </ProtectedRoute>
+            <>
+              <SignedIn>
+                <Profil />
+              </SignedIn>
+              <SignedOut>
+                <Login />
+              </SignedOut>
+            </>
           }
         />
-        <Route
-          path="/sci/createproperty"
-          element={<SCIForm companyId={""} />}
-        />
-        {/* <Route
-          path="/property/:id"
-          element={<PropertyDetail />}
-        /> */}
       </Routes>
     </BrowserRouter>
   );

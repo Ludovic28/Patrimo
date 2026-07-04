@@ -3,12 +3,13 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { supabase } from "../../Lib/supabase/supabase";
+import sql from "../../Lib/neon/client";
 import { ButtonZone } from "../../Utils/ZoneTypes";
 
 type Props = {
   companyId: string;
 };
+
 type Property = {
   id: string;
   name: string;
@@ -26,36 +27,31 @@ export default function PropertyDashboard({
 
   useEffect(() => {
     const fetchProperties = async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select(
-          `
-        id,
-        name,
-        project_details(key, value)
-      `
-        )
-        .eq("company_id", companyId);
+      try {
+        // Fetch projects with their address from project_details
+        const data = await sql`
+          select
+            p.id,
+            p.name,
+            coalesce(pd.value, '') as address
+          from projects p
+          left join project_details pd 
+            on pd.project_id = p.id 
+            and pd.key = 'address'
+          where p.company_id = ${companyId}
+          order by p.created_at asc
+        `;
 
-      if (error) {
-        console.error("Erreur:", error);
-        return;
-      }
-
-      if (data) {
-        const mapped = data.map((project) => ({
-          id: project.id,
-          name: project.name,
-          address:
-            project.project_details?.find(
-              (d: any) => d.key === "address"
-            )?.value ?? "",
-        }));
-        setProperties(mapped);
+        setProperties(data as Property[]);
+      } catch (err) {
+        console.error(
+          "Error fetching properties:",
+          err
+        );
       }
     };
     fetchProperties();
-  }, [id]);
+  }, [companyId]);
 
   return (
     <div className="p-8">
@@ -64,7 +60,7 @@ export default function PropertyDashboard({
       </h1>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {/* Bouton ajouter */}
+        {/* Add button */}
         <ButtonZone
           variant="add"
           onClick={() =>
@@ -77,7 +73,8 @@ export default function PropertyDashboard({
         >
           +
         </ButtonZone>
-        {/* Cartes des biens */}
+
+        {/* Property cards */}
         {properties.map((property) => (
           <ButtonZone
             key={property.id}

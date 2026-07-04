@@ -1,22 +1,24 @@
+import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../Lib/supabase/supabase";
+import sql from "../Lib/neon/client";
 import {
   ButtonZone,
   InputZone,
 } from "../Utils/ZoneTypes";
 
 // Page for creating a new company
-// Fetches company types from Supabase and saves the new company to the database
+// Fetches company types from Neon and saves the new company to the database
 export default function CreateCompany() {
   const navigate = useNavigate();
+  const { userId } = useAuth();
 
   // Form fields
   const [name, setName] = useState("");
   const [siret, setSiret] = useState("");
   const [typeId, setTypeId] = useState("");
 
-  // Company types fetched from the database (used to populate the dropdown)
+  // Company types fetched from the database
   const [companyTypes, setCompanyTypes] =
     useState<{ id: string; name: string }[]>([]);
 
@@ -26,23 +28,32 @@ export default function CreateCompany() {
     string | null
   >(null);
 
-  // Fetch all available company types from Supabase on component mount
+  // Fetch all available company types on component mount
   useEffect(() => {
     const fetchTypes = async () => {
-      const { data } = await supabase
-        .from("company_types")
-        .select("id, name");
-      if (data) setCompanyTypes(data);
+      try {
+        const data = await sql`
+          select id, name from company_types
+          order by name asc
+        `;
+        setCompanyTypes(
+          data as { id: string; name: string }[]
+        );
+      } catch (err) {
+        console.error(
+          "Error fetching company types:",
+          err
+        );
+      }
     };
     fetchTypes();
   }, []);
 
-  // Handle form submission — validates, inserts into Supabase, then redirects
+  // Handle form submission — validates, inserts into Neon, then redirects
   const handleCreate = async () => {
-    // Basic validation: name and type are required
     if (!name || !typeId) {
       setError(
-        "Company name and type are required."
+        "Le nom et le type sont obligatoires."
       );
       return;
     }
@@ -50,30 +61,18 @@ export default function CreateCompany() {
     setLoading(true);
     setError(null);
 
-    // Get the currently authenticated user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    // Insert the new company into the database
-    const { error } = await supabase
-      .from("companies")
-      .insert({
-        name,
-        siret,
-        type_id: typeId,
-        user_id: user?.id,
-      });
-
-    if (error) {
-      // Show error message and stop loading if the insert fails
+    try {
+      // Insert the new company linked to the current Clerk user
+      await sql`
+        insert into companies (name, siret, type_id, user_id)
+        values (${name}, ${siret || null}, ${typeId}, ${userId})
+      `;
+      navigate("/manage-projects");
+    } catch (err) {
       setError(
-        "An error occurred while creating the company."
+        "Une erreur est survenue lors de la création."
       );
       setLoading(false);
-    } else {
-      // Redirect to the dashboard on success
-      navigate("/manage-projects");
     }
   };
 
@@ -83,7 +82,6 @@ export default function CreateCompany() {
         Nouvelle société
       </h1>
 
-      {/* Display error message if any */}
       {error && (
         <p className="text-sm text-red-500">
           {error}
@@ -99,16 +97,16 @@ export default function CreateCompany() {
         handleLogin={handleCreate}
       />
 
-      {/* SIRET number input (optional) */}
+      {/* SIRET input (optional) */}
       <InputZone
         type="text"
-        placeholder="SIRET (optional)"
+        placeholder="SIRET (optionnel)"
         email={siret}
         setEmail={setSiret}
         handleLogin={handleCreate}
       />
 
-      {/* Company type dropdown — populated from company_types table */}
+      {/* Company type dropdown */}
       <select
         value={typeId}
         onChange={(e) =>
@@ -126,7 +124,7 @@ export default function CreateCompany() {
         ))}
       </select>
 
-      {/* Submit button — disabled while loading */}
+      {/* Submit button */}
       <ButtonZone
         onClick={handleCreate}
         disabled={loading}

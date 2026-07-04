@@ -1,10 +1,20 @@
+import { ClerkProvider } from "@clerk/clerk-react";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "./index.css";
 import ImmoROIApp from "./App";
+import "./index.css";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const publishableKey = import.meta.env
+  .VITE_CLERK_PUBLISHABLE_KEY;
+
+ReactDOM.createRoot(
+  document.getElementById("root")!
+).render(
   <React.StrictMode>
-    <ImmoROIApp />
+    <ClerkProvider
+      publishableKey={publishableKey}
+    >
+      <ImmoROIApp />
+    </ClerkProvider>
   </React.StrictMode>
 );

@@ -1,9 +1,10 @@
+import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { supabase } from "../Lib/supabase/supabase";
+import sql from "../Lib/neon/client";
 import {
   ButtonZone,
   InputZone,
@@ -20,24 +21,14 @@ type ProjectType = {
 type Company = {
   id: string;
   name: string;
-  company_types:
-    | { id: string; name: string }
-    | { id: string; name: string }[]
-    | null;
+  company_type_id: string;
+  company_type_name: string;
 };
-
-function getTypeName(
-  companyTypes: Company["company_types"]
-): string {
-  if (!companyTypes) return "";
-  if (Array.isArray(companyTypes))
-    return companyTypes[0]?.name ?? "";
-  return companyTypes.name;
-}
 
 export default function CreateProject() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { userId } = useAuth();
 
   const [company, setCompany] =
     useState<Company | null>(null);
@@ -66,81 +57,71 @@ export default function CreateProject() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: companyData } = await supabase
-        .from("companies")
-        .select(
-          "id, name, company_types(id, name)"
-        )
-        .eq("id", id)
-        .single();
+      if (!id) return;
 
-      if (companyData) {
-        setCompany(companyData as Company);
+      try {
+        // Fetch company with its type
+        const companyData = await sql`
+          select 
+            c.id,
+            c.name,
+            ct.id as company_type_id,
+            ct.name as company_type_name
+          from companies c
+          left join company_types ct on ct.id = c.type_id
+          where c.id = ${id}
+          limit 1
+        `;
 
-        const companyTypes =
-          companyData.company_types;
-        const typeName = Array.isArray(
-          companyTypes
-        )
-          ? (companyTypes[0]?.name ?? "")
-          : ((
-              companyTypes as {
-                id: string;
-                name: string;
-              } | null
-            )?.name ?? "");
+        if (companyData.length === 0) return;
 
-        if (
-          typeName.toLowerCase() === "holding"
-        ) {
+        const company = companyData[0] as Company;
+        setCompany(company);
+
+        const typeName =
+          company.company_type_name?.toLowerCase() ??
+          "";
+
+        if (typeName === "holding") {
           setIsHolding(true);
 
           // Fetch all company types except Holding
-          const { data: companyTypesData } =
-            await supabase
-              .from("company_types")
-              .select("id, name")
-              .neq("name", "Holding");
+          const typesData = await sql`
+            select id, name
+            from company_types
+            where name != 'Holding'
+            order by name asc
+          `;
 
-          if (companyTypesData)
-            setSubsidiaryTypes(companyTypesData);
+          setSubsidiaryTypes(
+            typesData as {
+              id: string;
+              name: string;
+            }[]
+          );
         } else {
-          const companyTypeId = Array.isArray(
-            companyTypes
-          )
-            ? companyTypes[0]?.id
-            : (
-                companyTypes as {
-                  id: string;
-                  name: string;
-                } | null
-              )?.id;
+          // Fetch allowed project types for this company type
+          const typesData = await sql`
+            select 
+              pt.id,
+              pt.name,
+              pt.description,
+              pt.can_have_revenues
+            from project_types pt
+            inner join company_type_project_types ctpt on ctpt.project_type_id = pt.id
+            where ctpt.company_type_id = ${company.company_type_id}
+            order by pt.name asc
+          `;
 
-          if (companyTypeId) {
-            const { data: typesData } =
-              await supabase
-                .from(
-                  "company_type_project_types"
-                )
-                .select(
-                  "project_types(id, name, description, can_have_revenues)"
-                )
-                .eq(
-                  "company_type_id",
-                  companyTypeId
-                );
-
-            if (typesData) {
-              const types = typesData
-                .map(
-                  (row: any) => row.project_types
-                )
-                .filter(Boolean)
-                .flat();
-              setProjectTypes(types);
-            }
-          }
+          setProjectTypes(
+            typesData as ProjectType[]
+          );
         }
+      } catch (err) {
+        console.error(
+          "Error fetching data:",
+          err
+        );
       }
     };
     fetchData();
@@ -160,24 +141,15 @@ export default function CreateProject() {
         return;
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      const { error } = await supabase
-        .from("companies")
-        .insert({
-          name,
-          type_id: projectTypeId,
-          user_id: user?.id,
-          parent_company_id: id,
-        });
-
-      if (error) {
+      try {
+        await sql`
+          insert into companies (name, type_id, user_id, parent_company_id)
+          values (${name}, ${projectTypeId}, ${userId}, ${id})
+        `;
+        navigate(`/company/${id}`);
+      } catch (err) {
         setError("Erreur lors de la création.");
         setLoading(false);
-      } else {
-        navigate(`/company/${id}`);
       }
       return;
     }
@@ -191,32 +163,26 @@ export default function CreateProject() {
       return;
     }
 
-    const { error } = await supabase
-      .from("projects")
-      .insert({
-        name,
-        description,
-        project_type_id: projectTypeId,
-        company_id: id,
-        status: "active",
-      });
-
-    if (error) {
+    try {
+      await sql`
+        insert into projects (name, description, project_type_id, company_id, status)
+        values (${name}, ${description}, ${projectTypeId}, ${id}, 'active')
+      `;
+      navigate(`/company/${id}`);
+    } catch (err) {
       setError(
         "Erreur lors de la création du projet."
       );
       setLoading(false);
-    } else {
-      navigate(`/company/${id}`);
     }
   };
 
-  const companyTypeName = getTypeName(
-    company?.company_types ?? null
-  );
+  const companyTypeName =
+    company?.company_type_name?.toLowerCase() ??
+    "";
 
   const renderForm = () => {
-    switch (companyTypeName.toLowerCase()) {
+    switch (companyTypeName) {
       case "sci":
         return <SCIForm companyId={id!} />;
       case "holding":
@@ -301,10 +267,9 @@ export default function CreateProject() {
 
       <div className="mx-auto mt-4 max-w-md space-y-4">
         <h1 className="text-2xl font-bold">
-          {companyTypeName.toLowerCase() === "sci"
+          {companyTypeName === "sci"
             ? "Ajouter un bien immobilier"
-            : companyTypeName.toLowerCase() ===
-                "holding"
+            : companyTypeName === "holding"
               ? "Créer une filiale"
               : "Ajouter un projet"}
         </h1>
@@ -321,6 +286,16 @@ export default function CreateProject() {
         )}
 
         {renderForm()}
+
+        {/* Hide submit button for SCI since SCIForm handles it */}
+        {companyTypeName !== "sci" && (
+          <ButtonZone
+            onClick={handleCreate}
+            disabled={loading}
+          >
+            {loading ? "En cours..." : "Créer"}
+          </ButtonZone>
+        )}
       </div>
     </div>
   );

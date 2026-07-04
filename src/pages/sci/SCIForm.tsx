@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../Lib/supabase/supabase";
+import sql from "../../Lib/neon/client";
 
 type Props = {
   companyId: string;
@@ -12,9 +12,8 @@ export default function SCIForm({
   const [currentStep, setCurrentStep] =
     useState(1);
   const navigate = useNavigate();
-  {
-    /* Step 1 */
-  }
+
+  // Step 1
   const [name, setName] = useState("");
   const [adress, setAdress] = useState("");
   const [purchase_price, setPurchase_price] =
@@ -25,9 +24,8 @@ export default function SCIForm({
     renovation_amount,
     setrenovation_amount,
   ] = useState("");
-  {
-    /* Step 2 */
-  }
+
+  // Step 2
   const [rent_amount, setRent_amount] =
     useState("");
   const [charges_amount, setCharges_amount] =
@@ -36,9 +34,8 @@ export default function SCIForm({
     useState("");
   const [lease_end_date, setLease_end_date] =
     useState("");
-  {
-    /* Step 3 */
-  }
+
+  // Step 3
   const [lender_type, setLender_type] =
     useState("");
   const [bank_amount, setBank_amount] =
@@ -53,15 +50,14 @@ export default function SCIForm({
     useState("");
   const [projectTypeId, setProjectTypeId] =
     useState("");
+  const [error, setError] = useState<
+    string | null
+  >(null);
 
   const nextStep = () =>
     setCurrentStep((prev) => prev + 1);
   const prevStep = () =>
     setCurrentStep((prev) => prev - 1);
-
-  const [error, setError] = useState<
-    string | null
-  >(null);
 
   const isStepValid = () => {
     switch (currentStep) {
@@ -78,91 +74,53 @@ export default function SCIForm({
           lease_start_date !== ""
         );
       case 3:
+        if (lender_type === "none") return true;
         return (
           bank_amount !== "" &&
           duration_months !== "" &&
           monthly_payment !== "" &&
           loan_start_date !== "" &&
-          loan_end_date !== "" &&
-          lender_type !== ""
+          loan_end_date !== ""
         );
       default:
         return false;
     }
   };
 
+  // Fetch the project type id for "Real estate asset"
   useEffect(() => {
     const fetchProjectTypeId = async () => {
-      const { data } = await supabase
-        .from("project_types")
-        .select("id")
-        .eq("name", "Real estate asset") // adapte selon ton nom exact dans la BDD
-        .single();
-      if (data) setProjectTypeId(data.id);
+      try {
+        const data = await sql`
+          select id from project_types
+          where name = 'Real estate asset'
+          limit 1
+        `;
+        if (data.length > 0)
+          setProjectTypeId(data[0].id);
+      } catch (err) {
+        console.error(
+          "Error fetching project type:",
+          err
+        );
+      }
     };
     fetchProjectTypeId();
   }, []);
 
   const handleSubmit = async () => {
-    // 1. INSERT dans projects
-
-    if (!name || !adress || !purchase_price) {
+    // Validate all steps before inserting anything
+    if (
+      !name ||
+      !adress ||
+      !purchase_price ||
+      !purchase_date
+    ) {
       setError(
-        "Le nom, l'adresse et le prix d'achat sont obligatoires."
+        "Le nom, l'adresse, le prix et la date d'achat sont obligatoires."
       );
       return;
     }
-    const {
-      data: projectData,
-      error: projectError,
-    } = await supabase
-      .from("projects")
-      .insert({
-        name,
-        company_id: companyId,
-        project_type_id: projectTypeId,
-        purchase_price: purchase_price
-          ? parseFloat(purchase_price)
-          : null,
-        purchase_date: purchase_date || null,
-        status: "active",
-      })
-      .select("id")
-      .single();
-
-    if (projectError || !projectData) {
-      setError(
-        "Erreur lors de la création du bien."
-      );
-      return;
-    }
-
-    const projectId = projectData.id;
-
-    // 2. INSERT dans project_details (adresse + rénovations)
-    const { error: detailsError } = await supabase
-      .from("project_details")
-      .insert([
-        {
-          project_id: projectId,
-          key: "address",
-          value: adress,
-        },
-        {
-          project_id: projectId,
-          key: "renovation_amount",
-          value: renovation_amount || "0",
-        },
-      ]);
-
-    if (detailsError) {
-      setError(
-        "Erreur lors de l'enregistrement de l'adresse."
-      );
-      return;
-    }
-
-    // 3. INSERT dans leases
 
     if (!rent_amount || !lease_start_date) {
       setError(
@@ -171,74 +129,110 @@ export default function SCIForm({
       return;
     }
 
-    const { error: leaseError } = await supabase
-      .from("leases")
-      .insert({
-        project_id: projectId,
-        rent_amount: parseFloat(rent_amount),
-        charges_amount: charges_amount
-          ? parseFloat(charges_amount)
-          : 0,
-        start_date: lease_start_date,
-        end_date: lease_end_date || null,
-        status: "actif",
-      });
-
-    if (leaseError) {
+    if (lender_type === "") {
       setError(
-        "Erreur lors de l'enregistrement du bail."
+        "Veuillez sélectionner un type de financement."
       );
       return;
     }
 
-    // 4. INSERT dans loans
-
-    if (
-      !bank_amount ||
-      !duration_months ||
-      !monthly_payment
-    ) {
-      setError(
-        "Les informations du prêt sont obligatoires."
-      );
-      return;
+    if (lender_type !== "none") {
+      if (
+        !bank_amount ||
+        !duration_months ||
+        !monthly_payment ||
+        !loan_start_date ||
+        !loan_end_date
+      ) {
+        setError(
+          "Les informations du prêt sont obligatoires."
+        );
+        return;
+      }
     }
 
-    const { error: loanError } = await supabase
-      .from("loans")
-      .insert({
-        project_id: projectId,
-        lender_type,
-        lender_company_id:
-          lender_type === "company"
-            ? companyId
-            : null,
-        bank_amount: parseFloat(bank_amount),
-        duration_months: parseInt(
-          duration_months
-        ),
-        monthly_payment: parseFloat(
-          monthly_payment
-        ),
-        start_date: loan_start_date,
-        end_date: loan_end_date,
-      });
+    // All validations passed — start inserting
+    try {
+      // 1. Insert into projects
+      const projectData = await sql`
+      insert into projects (name, company_id, project_type_id, purchase_price, purchase_date, status)
+      values (
+        ${name},
+        ${companyId},
+        ${projectTypeId},
+        ${parseFloat(purchase_price)},
+        ${purchase_date},
+        'active'
+      )
+      returning id
+    `;
 
-    if (loanError) {
-      setError(
-        "Erreur lors de l'enregistrement du prêt."
+      if (
+        !projectData ||
+        projectData.length === 0
+      ) {
+        setError(
+          "Erreur lors de la création du bien."
+        );
+        return;
+      }
+
+      const projectId = projectData[0].id;
+
+      // 2. Insert into project_details
+      await sql`
+      insert into project_details (project_id, key, value)
+      values 
+        (${projectId}, 'address', ${adress}),
+        (${projectId}, 'renovation_amount', ${renovation_amount || "0"})
+    `;
+
+      // 3. Insert into leases
+      await sql`
+      insert into leases (project_id, rent_amount, charges_amount, start_date, end_date, status)
+      values (
+        ${projectId},
+        ${parseFloat(rent_amount)},
+        ${charges_amount ? parseFloat(charges_amount) : 0},
+        ${lease_start_date},
+        ${lease_end_date || null},
+        'actif'
+      )
+    `;
+
+      // 4. Insert into loans — only if not cash purchase
+      if (lender_type !== "none") {
+        await sql`
+        insert into loans (project_id, lender_type, lender_company_id, bank_amount, duration_months, monthly_payment, start_date, end_date)
+        values (
+          ${projectId},
+          ${lender_type},
+          ${lender_type === "company" ? companyId : null},
+          ${parseFloat(bank_amount)},
+          ${parseInt(duration_months)},
+          ${parseFloat(monthly_payment)},
+          ${loan_start_date},
+          ${loan_end_date}
+        )
+      `;
+      }
+
+      // 5. Redirect on success
+      navigate(`/company/${companyId}`);
+    } catch (err) {
+      console.error(
+        "Error creating property:",
+        err
       );
-      return;
+      setError(
+        "Une erreur est survenue lors de la création."
+      );
     }
-
-    // 5. Redirection après succès
-
-    navigate(`/company/${companyId}`);
   };
 
   return (
     <div className="space-y-6">
-      {/* Barre de progression */}
+      {/* Progress bar */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">
           {currentStep}/3
@@ -401,7 +395,11 @@ export default function SCIForm({
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
             >
               <option value="">
-                -- Type de prêteur --
+                -- Sélectionnez un type de prêteur
+                --
+              </option>
+              <option value="none">
+                Achat comptant — pas de prêt
               </option>
               <option value="bank">Banque</option>
               <option value="company">
@@ -409,71 +407,83 @@ export default function SCIForm({
               </option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Montant emprunté
-            </label>
-            <input
-              type="number"
-              value={bank_amount}
-              onChange={(e) =>
-                setBank_amount(e.target.value)
-              }
-              className="w-full rounded border p-3"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Durée du prêt (en mois)
-            </label>
-            <input
-              type="number"
-              value={duration_months}
-              onChange={(e) =>
-                setDuration_months(e.target.value)
-              }
-              className="w-full rounded border p-3"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Mensualité
-            </label>
-            <input
-              type="number"
-              value={monthly_payment}
-              onChange={(e) =>
-                setMonthly_payment(e.target.value)
-              }
-              className="w-full rounded border p-3"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Date de début du prêt
-            </label>
-            <input
-              type="date"
-              value={loan_start_date}
-              onChange={(e) =>
-                setLoan_start_date(e.target.value)
-              }
-              className="w-full rounded border p-3"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Date de fin du prêt
-            </label>
-            <input
-              type="date"
-              value={loan_end_date}
-              onChange={(e) =>
-                setLoan_end_date(e.target.value)
-              }
-              className="w-full rounded border p-3"
-            />
-          </div>
+          {/* Champs prêt — masqués si achat comptant */}
+          {lender_type !== "none" &&
+            lender_type !== "" && (
+              <>
+                <div>
+                  <label>Montant emprunté</label>
+                  <input
+                    type="number"
+                    value={bank_amount}
+                    onChange={(e) =>
+                      setBank_amount(
+                        e.target.value
+                      )
+                    }
+                    className="w-full rounded border p-3"
+                  />
+                </div>
+                <div>
+                  <label>
+                    Durée du prêt (en mois)
+                  </label>
+                  <input
+                    type="number"
+                    value={duration_months}
+                    onChange={(e) =>
+                      setDuration_months(
+                        e.target.value
+                      )
+                    }
+                    className="w-full rounded border p-3"
+                  />
+                </div>
+                <div>
+                  <label>Mensualité</label>
+                  <input
+                    type="number"
+                    value={monthly_payment}
+                    onChange={(e) =>
+                      setMonthly_payment(
+                        e.target.value
+                      )
+                    }
+                    className="w-full rounded border p-3"
+                  />
+                </div>
+                <div>
+                  <label>
+                    Date de début du prêt
+                  </label>
+                  <input
+                    type="date"
+                    value={loan_start_date}
+                    onChange={(e) =>
+                      setLoan_start_date(
+                        e.target.value
+                      )
+                    }
+                    className="w-full rounded border p-3"
+                  />
+                </div>
+                <div>
+                  <label>
+                    Date de fin du prêt
+                  </label>
+                  <input
+                    type="date"
+                    value={loan_end_date}
+                    onChange={(e) =>
+                      setLoan_end_date(
+                        e.target.value
+                      )
+                    }
+                    className="w-full rounded border p-3"
+                  />
+                </div>
+              </>
+            )}
         </div>
       )}
 

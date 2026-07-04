@@ -3,33 +3,19 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { supabase } from "../Lib/supabase/supabase";
+import sql from "../Lib/neon/client";
 import Navbar from "../Utils/navBar";
 import { ButtonZone } from "../Utils/ZoneTypes";
 import PropertyDashboard from "./sci/PropertyDashboard";
 
-// Company with its type name joined
 type Company = {
   id: string;
   name: string;
   siret: string | null;
   created_at: string;
-  company_types:
-    | { name: string }
-    | { name: string }[]
-    | null;
+  company_type_name: string | null;
   parent_company_id: string | null;
 };
-
-// Helper to extract type name regardless of Supabase return format
-function getTypeName(
-  companyTypes: Company["company_types"]
-): string {
-  if (!companyTypes) return "";
-  if (Array.isArray(companyTypes))
-    return companyTypes[0]?.name ?? "";
-  return companyTypes.name;
-}
 
 export default function CompanyDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -46,34 +32,56 @@ export default function CompanyDashboard() {
 
   useEffect(() => {
     const fetchCompany = async () => {
-      const { data, error } = await supabase
-        .from("companies")
-        .select(
-          "id, name, siret, created_at, company_types(name), parent_company_id"
-        )
-        .order("created_at", { ascending: true });
+      if (!id) return;
 
-      if (error)
+      try {
+        // Fetch current company with its type
+        const companyData = await sql`
+          select
+            c.id,
+            c.name,
+            c.siret,
+            c.created_at,
+            c.parent_company_id,
+            ct.name as company_type_name
+          from companies c
+          left join company_types ct on ct.id = c.type_id
+          where c.id = ${id}
+          limit 1
+        `;
+
+        if (companyData.length === 0) return;
+
+        const current = companyData[0] as Company;
+        setCompany(current);
+        setHasCompanyParent(
+          current.parent_company_id !== null
+        );
+
+        // Fetch child companies (subsidiaries)
+        const childrenData = await sql`
+          select
+            c.id,
+            c.name,
+            c.siret,
+            c.created_at,
+            c.parent_company_id,
+            ct.name as company_type_name
+          from companies c
+          left join company_types ct on ct.id = c.type_id
+          where c.parent_company_id = ${id}
+          order by c.created_at asc
+        `;
+
+        setCompanies(childrenData as Company[]);
+      } catch (err) {
         console.error(
           "Error fetching company:",
-          error
+          err
         );
-
-      if (data) {
-        const companyData = data.find(
-          (c) => c.id === id
-        );
-        if (companyData)
-          setCompany(companyData as Company);
-        const companyChildren = data.filter(
-          (c) => c.parent_company_id === id
-        ) as Company[];
-        setCompanies(companyChildren);
-        setHasCompanyParent(
-          companyData?.parent_company_id !== null
-        );
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchCompany();
   }, [id]);
@@ -94,9 +102,9 @@ export default function CompanyDashboard() {
     );
   }
 
-  const companyTypeName = getTypeName(
-    company.company_types
-  ).toLowerCase();
+  const companyTypeName =
+    company.company_type_name?.toLowerCase() ??
+    "";
 
   return (
     <div className="p-8">
@@ -123,7 +131,7 @@ export default function CompanyDashboard() {
             {company.name}
           </h1>
           <p className="text-sm sm:text-base md:text-lg lg:text-xl">
-            {getTypeName(company.company_types)}
+            {company.company_type_name}
             {company.siret &&
               ` • ${company.siret}`}
           </p>
@@ -169,9 +177,7 @@ export default function CompanyDashboard() {
                   {company.name}
                 </span>
                 <span className="text-xs opacity-60">
-                  {getTypeName(
-                    company.company_types
-                  )}
+                  {company.company_type_name}
                 </span>
               </ButtonZone>
             ))}
